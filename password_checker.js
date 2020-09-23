@@ -1,20 +1,15 @@
 /*
-
 Realizado por: Miguel Neira Martín
 Prueba para TramitApp
-
 */
 
 const fs = require('fs');
 
 
 /*
-
 Función que compruebe si la contraseña elegida por el usuario está en la lista
 de más utilizadas. Devuelve una promesa con el valor true o false según si se ha
 encontrado o no la contraseña
-
-
 */
 function isMostUsed(password) {
     const stream = fs.createReadStream("./xato-net-10-million-passwords.txt", {encoding: 'utf8'});
@@ -30,16 +25,30 @@ function isMostUsed(password) {
     return new Promise((resolve, reject) => {
         // leyendo por chunks
         let result = false;
+        let twoChunks = ["", ""];
         stream.on('data', (chunk) => {
-			// si se encuentra se resuelve la promesa
-            if (isPasswordInChunk(chunk.toString().split('\n'), password)) {
+          /*
+            La idea es, en el chunk i-ésimo, tener en twoChunks[0] la parte final del
+            chunk i-1 para después concatenarlo a twoChunks[1], que tiene el chunk i.
+            He escogido de forma deliberada el substring twoChunks[1].length - 80 para asegurarme
+            de no guardar todo el chunk y de recoger las contraseñas que se perdían en la versión previa.
+          */
+
+            twoChunks[0] = twoChunks[1].substring(twoChunks[1].length - 80);
+            twoChunks[1] = chunk.toString();
+            twoChunks[0] += twoChunks[1];
+            
+
+	// si se encuentra se resuelve la promesa
+            if (isPasswordInChunk(twoChunks[0].split('\n'), password)) {
                 result = true;
                 resolve(result);
                 stream.destroy();
             }         
+            
         });
         stream.on('end', () => {
-			// al llegar al final también se resuelve la promesa
+	// al llegar al final también se resuelve la promesa
             resolve(result);
         })
   
